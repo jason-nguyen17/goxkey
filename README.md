@@ -1,8 +1,5 @@
 <p align="center">
-   <picture>
-     <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/613943/213103585-33c79982-617d-4f81-a949-3335b465129a.png">
-     <img src="https://user-images.githubusercontent.com/613943/213103583-4399e224-841f-462a-887d-6427f7af7376.png" width="90px">
-   </picture>
+	<img src="./icons/icon.png" width="90px">
 </p>
 
 ---
@@ -46,3 +43,11 @@ After that, you'll find the `Gõ Key.app` file in the `target/debug/bundle` fold
 
 - [core-foundation](https://crates.io/crates/core-foundation), [core-graphics](https://crates.io/crates/core-graphics): for event handling on macOS
 - [vi-rs](https://github.com/zerox-dg/vi-rs): the Vietnamese Input Engine
+
+## Want to support the project?
+
+It would be much appreciated if you want to make a small donation to support my work!
+
+Your name will be put on a special place in the application as a thank you gesture from the development team!
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B6NHSJ)

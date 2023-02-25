@@ -1,16 +1,20 @@
+mod config;
+mod hotkey;
 mod input;
 mod platform;
 mod ui;
 
+use std::thread;
+
 use druid::{AppLauncher, ExtEventSink, Target, WindowDesc};
-use input::INPUT_STATE;
+use input::{rebuild_keyboard_layout_map, INPUT_STATE};
 use log::debug;
 use once_cell::sync::OnceCell;
 use platform::{
     run_event_listener, send_backspace, send_string, Handle, KeyModifier, KEY_DELETE, KEY_ENTER,
     KEY_ESCAPE, KEY_SPACE, KEY_TAB,
 };
-use std::thread;
+
 use ui::{UIDataAdapter, UPDATE_UI};
 
 static UI_EVENT_SINK: OnceCell<ExtEventSink> = OnceCell::new();
@@ -36,8 +40,7 @@ fn event_handler(handle: Handle, keycode: Option<char>, modifiers: KeyModifier) 
     unsafe {
         match keycode {
             Some(keycode) => {
-                // Toggle Vietnamese input mod with Ctrl + Cmd + Space key
-                if modifiers.is_control() && modifiers.is_super() && keycode == KEY_SPACE {
+                if INPUT_STATE.get_hotkey().is_match(modifiers, &keycode) {
                     INPUT_STATE.toggle_vietnamese();
                     if let Some(event_sink) = UI_EVENT_SINK.get() {
                         _ = event_sink.submit_command(UPDATE_UI, (), Target::Auto);
@@ -97,9 +100,11 @@ fn event_handler(handle: Handle, keycode: Option<char>, modifiers: KeyModifier) 
 fn main() {
     env_logger::init();
 
+    rebuild_keyboard_layout_map();
+
     let win = WindowDesc::new(ui::main_ui_builder)
         .title("gõkey")
-        .window_size((320.0, 200.0))
+        .window_size((320.0, 234.0))
         .resizable(false);
     let app = AppLauncher::with_window(win);
     let event_sink = app.get_external_handle();
