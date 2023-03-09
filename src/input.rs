@@ -20,18 +20,7 @@ const MAX_POSSIBLE_WORD_LENGTH: usize = 10;
 
 const MAX_DUPLICATE_LENGTH: usize = 4;
 
-const TONABLE_VOWELS: [char; 144] = [
-    'a', 'à', 'ả', 'ã', 'á', 'ạ', 'ă', 'ằ', 'ẳ', 'ẵ', 'ắ', 'ặ', 'â', 'ầ', 'ẩ', 'ẫ', 'ấ', 'ậ', 'A',
-    'À', 'Ả', 'Ã', 'Á', 'Ạ', 'Ă', 'Ằ', 'Ẳ', 'Ẵ', 'Ắ', 'Ặ', 'Â', 'Ầ', 'Ẩ', 'Ẫ', 'Ấ', 'Ậ', 'e', 'è',
-    'ẻ', 'ẽ', 'é', 'ẹ', 'ê', 'ề', 'ể', 'ễ', 'ế', 'ệ', 'E', 'È', 'Ẻ', 'Ẽ', 'É', 'Ẹ', 'Ê', 'Ề', 'Ể',
-    'Ễ', 'Ế', 'Ệ', 'i', 'ì', 'ỉ', 'ĩ', 'í', 'ị', 'I', 'Ì', 'Ỉ', 'Ĩ', 'Í', 'Ị', 'o', 'ò', 'ỏ', 'õ',
-    'ó', 'ọ', 'ô', 'ồ', 'ổ', 'ỗ', 'ố', 'ộ', 'ơ', 'ờ', 'ở', 'ỡ', 'ớ', 'ợ', 'O', 'Ò', 'Ỏ', 'Õ', 'Ó',
-    'Ọ', 'Ô', 'Ồ', 'Ổ', 'Ỗ', 'Ố', 'Ộ', 'Ơ', 'Ờ', 'Ở', 'Ỡ', 'Ớ', 'Ợ', 'u', 'ù', 'ủ', 'ũ', 'ú', 'ụ',
-    'ư', 'ừ', 'ử', 'ữ', 'ứ', 'ự', 'U', 'Ù', 'Ủ', 'Ũ', 'Ú', 'Ụ', 'Ư', 'Ừ', 'Ử', 'Ữ', 'Ứ', 'Ự', 'y',
-    'ỳ', 'ỷ', 'ỹ', 'ý', 'ỵ', 'Y', 'Ỳ', 'Ỷ', 'Ỹ', 'Ý', 'Ỵ',
-];
-
-pub static mut INPUT_STATE: Lazy<InputState> = Lazy::new(|| InputState::new());
+pub static mut INPUT_STATE: Lazy<InputState> = Lazy::new(InputState::new);
 
 pub const PREDEFINED_CHARS: [char; 47] = [
     'a', '`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'q', 'w', 'e', 'r', 't',
@@ -123,6 +112,7 @@ pub fn rebuild_keyboard_layout_map() {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(PartialEq, Eq, Data, Clone, Copy)]
 pub enum TypingMethod {
     VNI,
@@ -232,7 +222,7 @@ impl InputState {
     }
 
     pub fn get_hotkey(&self) -> &Hotkey {
-        return &self.hotkey;
+        &self.hotkey
     }
 
     pub fn should_transform_keys(&self, c: &char) -> bool {
@@ -252,7 +242,7 @@ impl InputState {
             TypingMethod::Telex => vi::telex::transform_buffer,
         };
         transform_method(self.buffer.chars(), &mut output);
-        return output;
+        output
     }
 
     pub fn should_send_keyboard_event(&self, word: &str) -> bool {
@@ -307,9 +297,9 @@ impl InputState {
         let len = self.buffer.len();
         if len >= MAX_DUPLICATE_LENGTH {
             let buf = &self.buffer[len - MAX_DUPLICATE_LENGTH..];
-            let first = buf.chars().nth(0).unwrap();
+            let first = buf.chars().next().unwrap();
             return buf.chars().all(|c| c == first);
         }
-        return false;
+        false
     }
 }

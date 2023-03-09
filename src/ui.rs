@@ -1,21 +1,22 @@
 use crate::{
     input::{rebuild_keyboard_layout_map, TypingMethod, INPUT_STATE},
-    platform::{KeyModifier, KEY_SPACE, SYMBOL_ALT, SYMBOL_CTRL, SYMBOL_SHIFT, SYMBOL_SUPER},
+    platform::{
+        self, KeyModifier, SystemTray, SystemTrayMenuItemKey, SYMBOL_ALT, SYMBOL_CTRL,
+        SYMBOL_SHIFT, SYMBOL_SUPER,
+    },
+    UI_EVENT_SINK,
 };
 use druid::{
-    text::{
-        format::{Formatter, Validation},
-        TextInput,
-    },
+    commands::QUIT_APP,
     theme::{BACKGROUND_DARK, BORDER_DARK, PLACEHOLDER_COLOR},
-    widget::{Button, Checkbox, Container, Controller, Flex, Label, RadioGroup, Switch, TextBox},
-    Data, Env, Event, EventCtx, KeyModifiers, Lens, Selector, Widget, WidgetExt,
+    widget::{
+        Button, Checkbox, Container, Controller, FillStrat, Flex, Image, Label, LineBreaking,
+        RadioGroup, Switch, TextBox,
+    },
+    Application, Data, Env, Event, EventCtx, ImageBuf, Lens, Selector, Target, Widget, WidgetExt,
 };
 
 pub const UPDATE_UI: Selector = Selector::new("gox-ui.update-ui");
-
-// TODO:
-// 2. Implement update for Controller to submit change to INPUT_STATE
 
 pub fn format_letter_key(c: char) -> String {
     if c.is_ascii_whitespace() {
@@ -67,6 +68,8 @@ pub struct UIDataAdapter {
     alt_key: bool,
     shift_key: bool,
     letter_key: String,
+    // system tray
+    systray: SystemTray,
 }
 
 impl UIDataAdapter {
@@ -75,13 +78,14 @@ impl UIDataAdapter {
             is_enabled: true,
             typing_method: TypingMethod::Telex,
             hotkey_display: String::new(),
-            // TODO: These values should be read from hotkey object
             super_key: true,
             ctrl_key: true,
             alt_key: false,
             shift_key: false,
             letter_key: String::from("Space"),
+            systray: SystemTray::new(),
         };
+        ret.setup_system_tray_actions();
         ret.update();
         ret
     }
@@ -98,7 +102,70 @@ impl UIDataAdapter {
             self.alt_key = modifiers.is_alt();
             self.shift_key = modifiers.is_shift();
             self.letter_key = format_letter_key(keycode);
+
+            match self.is_enabled {
+                true => {
+                    self.systray.set_title("VN");
+                    self.systray
+                        .set_menu_item_title(SystemTrayMenuItemKey::Enable, "Tắt gõ tiếng việt");
+                }
+                false => {
+                    self.systray.set_title("EN");
+                    self.systray
+                        .set_menu_item_title(SystemTrayMenuItemKey::Enable, "Bật gõ tiếng việt");
+                }
+            }
+            match self.typing_method {
+                TypingMethod::VNI => {
+                    self.systray
+                        .set_menu_item_title(SystemTrayMenuItemKey::TypingMethodTelex, "Telex");
+                    self.systray
+                        .set_menu_item_title(SystemTrayMenuItemKey::TypingMethodVNI, "VNI ✓");
+                }
+                TypingMethod::Telex => {
+                    self.systray
+                        .set_menu_item_title(SystemTrayMenuItemKey::TypingMethodTelex, "Telex ✓");
+                    self.systray
+                        .set_menu_item_title(SystemTrayMenuItemKey::TypingMethodVNI, "VNI");
+                }
+            }
         }
+    }
+
+    fn setup_system_tray_actions(&mut self) {
+        self.systray
+            .set_menu_item_callback(SystemTrayMenuItemKey::Enable, || {
+                unsafe {
+                    INPUT_STATE.toggle_vietnamese();
+                }
+                UI_EVENT_SINK
+                    .get()
+                    .map(|event| Some(event.submit_command(UPDATE_UI, (), Target::Auto)));
+            });
+        self.systray
+            .set_menu_item_callback(SystemTrayMenuItemKey::TypingMethodTelex, || {
+                unsafe {
+                    INPUT_STATE.set_method(TypingMethod::Telex);
+                }
+                UI_EVENT_SINK
+                    .get()
+                    .map(|event| Some(event.submit_command(UPDATE_UI, (), Target::Auto)));
+            });
+        self.systray
+            .set_menu_item_callback(SystemTrayMenuItemKey::TypingMethodVNI, || {
+                unsafe {
+                    INPUT_STATE.set_method(TypingMethod::VNI);
+                }
+                UI_EVENT_SINK
+                    .get()
+                    .map(|event| Some(event.submit_command(UPDATE_UI, (), Target::Auto)));
+            });
+        self.systray
+            .set_menu_item_callback(SystemTrayMenuItemKey::Exit, || {
+                UI_EVENT_SINK
+                    .get()
+                    .map(|event| Some(event.submit_command(QUIT_APP, (), Target::Auto)));
+            });
     }
 
     pub fn toggle_vietnamese(&mut self) {
@@ -121,13 +188,16 @@ impl<W: Widget<UIDataAdapter>> Controller<UIDataAdapter, W> for UIController {
         env: &Env,
     ) {
         match event {
-            Event::Command(cmd) => match cmd.get(UPDATE_UI) {
-                Some(_) => {
+            Event::Command(cmd) => {
+                if cmd.get(UPDATE_UI).is_some() {
                     data.update();
                     rebuild_keyboard_layout_map();
                 }
-                None => {}
-            },
+            }
+            Event::WindowCloseRequested => {
+                ctx.set_handled();
+                ctx.submit_command(platform::HIDE_COMMAND);
+            }
             _ => {}
         }
         child.event(ctx, event, data, env)
@@ -193,7 +263,7 @@ pub fn main_ui_builder() -> impl Widget<UIDataAdapter> {
                         Flex::row()
                             .with_child(Label::new("Kiểu gõ"))
                             .with_child(
-                                RadioGroup::new(vec![
+                                RadioGroup::column(vec![
                                     ("Telex", TypingMethod::Telex),
                                     ("VNI", TypingMethod::VNI),
                                 ])
@@ -248,7 +318,12 @@ pub fn main_ui_builder() -> impl Widget<UIDataAdapter> {
             Flex::row()
                 .with_child(Button::new("Cài đặt mặc định").fix_height(28.0))
                 .with_spacer(8.0)
-                .with_child(Button::new("Đóng").fix_width(100.0).fix_height(28.0))
+                .with_child(
+                    Button::new("Đóng")
+                        .fix_width(100.0)
+                        .fix_height(28.0)
+                        .on_click(|event, _, _| event.submit_command(platform::HIDE_COMMAND)),
+                )
                 .cross_axis_alignment(druid::widget::CrossAxisAlignment::Start)
                 .main_axis_alignment(druid::widget::MainAxisAlignment::End)
                 .must_fill_main_axis(true)
@@ -256,4 +331,43 @@ pub fn main_ui_builder() -> impl Widget<UIDataAdapter> {
         )
         .padding(8.0)
         .controller(UIController)
+}
+
+pub fn permission_request_ui_builder() -> impl Widget<()> {
+    let image_data = ImageBuf::from_data(include_bytes!("../assets/accessibility.png")).unwrap();
+    Flex::column()
+        .cross_axis_alignment(druid::widget::CrossAxisAlignment::Start)
+        .main_axis_alignment(druid::widget::MainAxisAlignment::Start)
+        .with_child(
+            Label::new("Chờ đã! Bạn cần phải cấp quyền Accessibility cho ứng dụng GõKey trước khi sử dụng.")
+                .with_line_break_mode(LineBreaking::WordWrap)
+                .padding(6.0)
+        )
+        .with_child(
+            Container::new(Image::new(image_data).fill_mode(FillStrat::Cover))
+                .rounded(4.0)
+                .padding(6.0)
+        )
+        .with_child(
+            Label::new("Bạn vui lòng thoát khỏi ứng dụng và mở lại sau khi đã cấp quyền.")
+                .with_line_break_mode(LineBreaking::WordWrap)
+                .padding(6.0)
+        )
+        .with_child(
+            Flex::row()
+                .cross_axis_alignment(druid::widget::CrossAxisAlignment::End)
+                .main_axis_alignment(druid::widget::MainAxisAlignment::End)
+                .with_child(
+                    Button::new("Thoát")
+                        .fix_width(100.0)
+                        .fix_height(28.0)
+                        .on_click(|_, _, _| {
+                            Application::global().quit();
+                        })
+                        .padding(6.0)
+                )
+                .must_fill_main_axis(true)
+        )
+        .must_fill_main_axis(true)
+        .padding(6.0)
 }

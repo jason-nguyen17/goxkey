@@ -5,6 +5,8 @@
 ---
 <img width="320" alt="image" align="right" src="https://user-images.githubusercontent.com/613943/213217673-e58c873a-9219-4a33-8487-620a07210206.png">
 
+[![Build and Tests](https://github.com/huytd/goxkey/actions/workflows/main.yml/badge.svg)](https://github.com/huytd/goxkey/actions/workflows/main.yml)
+
 **Gõkey** - A Vietnamese input method editor.
 
 - :zap: Excellent performance (Gen Z translation: Blazing fast!)
@@ -21,9 +23,17 @@ either VNI or TELEX method. Other than that, no other features are planned.
 
 ## How to install
 
-Currently, since we are still at an early development stage, no pre-built binaries are provided.
+There are 2 options to download GõKey at this moment: Build from source or Download the Nightly build.
 
-But the source code can be compiled easily:
+### Option 1: Download the Nightly Build
+
+Nightly build is the prebuilt binary that automatically bundled everytime we merged the code to the `main` branch.
+
+You can download it at the Release page here: https://github.com/huytd/goxkey/releases/tag/nightly-build
+
+### Option 2: Build from source
+
+The source code can be compiled easily:
 
 1. Get the latest stable version of the Rust compiler ([see here](https://rustup.rs/))
 2. Install the [cargo-bundle](https://github.com/burtonageo/cargo-bundle) extension, this is necessary for bundling macOS apps
@@ -37,7 +47,11 @@ But the source code can be compiled easily:
    cargo bundle
    ```
 
-After that, you'll find the `Gõ Key.app` file in the `target/debug/bundle` folder.
+After that, you'll find the `Gõ Key.app` file in the `target/debug/bundle` folder. Copy it to your `/Applications` folder.
+
+5. **(Important!):** Before you run the app, make you you already allowed Accessibility access for the app. Follow the [guide in the Wiki](https://github.com/huytd/goxkey/wiki/H%C6%B0%E1%BB%9Bng-d%E1%BA%ABn-s%E1%BB%ADa-l%E1%BB%97i-kh%C3%B4ng-g%C3%B5-%C4%91%C6%B0%E1%BB%A3c-ti%E1%BA%BFng-Vi%E1%BB%87t-tr%C3%AAn-macOS) to do so.
+
+Without this step, the app will crash and can't be use.
 
 ## Dependencies
 
